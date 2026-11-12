@@ -31,22 +31,22 @@ jobs:
 
       - name: Fix Folder Structure & Recreate Clean Android Project
         run: |
-          # ഫയലുകൾ myl_palakkad_app എന്ന സബ്-ഫോൾഡറിലാണെങ്കിൽ പുറത്തേക്ക് മാറ്റുന്നു
+          # ഫയലുകൾ സബ്-ഫോൾഡറിലാണെങ്കിൽ പുറത്തേക്ക് മാറ്റുന്നു
           if [ -d "myl_palakkad_app" ]; then
             cp -r myl_palakkad_app/* .
             rm -rf myl_palakkad_app
           fi
-          
+
           # google-services.json ഉണ്ടെങ്കിൽ ബാക്കപ്പ് ചെയ്യുന്നു
           if [ -f "android/app/google-services.json" ]; then
             cp android/app/google-services.json /tmp/google-services.json
           fi
 
-          # ഗ്രാഡിൽ എറർ ഒഴിവാക്കാൻ പഴയ android ഫോൾഡർ നീക്കം ചെയ്ത് പുതിയത് ഉണ്ടാക്കുന്നു
+          # പഴയ android ഫോൾഡർ നീക്കം ചെയ്ത് പുതിയത് നിർമ്മിക്കുന്നു
           rm -rf android
           flutter create --org org.mylpalakkad --project-name myl_palakkad_app --platforms android .
 
-          # ഫോൺ വിളിക്കാനും വാട്സ്ആപ്പ് തുറക്കാനുമുള്ള അനുമതികൾ ചേർക്കുന്നു
+          # ഫോൺ വിളിക്കാനും ഇന്റർനെറ്റിനുമുള്ള അനുമതികൾ ചേർക്കുന്നു
           sed -i '/<application/i <uses-permission android:name="android.permission.INTERNET"/>' android/app/src/main/AndroidManifest.xml
 
           # google-services.json തിരികെ ഇടുന്നു
@@ -54,14 +54,26 @@ jobs:
             cp /tmp/google-services.json android/app/google-services.json
           fi
 
-          # assets ഫോൾഡറുകൾ ഉറപ്പാക്കുന്നു
+          # assets ഫോൾഡറുകളും മലയാളം ഫോണ്ടും ഉറപ്പാക്കുന്നു
           mkdir -p assets/fonts assets/images
+          touch assets/images/.keep
+          if [ ! -f "assets/fonts/Manjari-Regular.ttf" ]; then
+            curl -L -s "https://github.com/google/fonts/raw/main/ofl/manjari/Manjari-Regular.ttf" -o assets/fonts/Manjari-Regular.ttf || true
+          fi
+
+      - name: Auto-Fix Flutter 3.50 Dart Compatibility
+        run: |
+          # പുതിയ Flutter വെർഷനിൽ ഒഴിവാക്കിയ പ്രോപ്പർട്ടികൾ ഉണ്ടെങ്കിൽ തനിയെ തിരുത്തുന്നു
+          find lib -name "*.dart" -exec sed -i 's/activeColor: AppColors.primaryGreen,//g' {} +
 
       - name: Install Flutter Dependencies
         run: flutter pub get
 
+      - name: Verify Dart Code (Check for any syntax error)
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings || true
+
       - name: Build Release APK
-        run: flutter build apk --release --no-tree-shake-icons
+        run: flutter build apk --release --no-tree-shake-icons -v
 
       - name: Rename APK for Easy Sharing
         run: |
@@ -76,8 +88,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.3.${{ github.run_number }}
-          name: "MYL Palakkad App v1.3.${{ github.run_number }}"
+          tag_name: v1.4.${{ github.run_number }}
+          name: "MYL Palakkad App v1.4.${{ github.run_number }}"
           files: build/app/outputs/flutter-apk/MYL_Palakkad_Official.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

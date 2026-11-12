@@ -30,7 +30,7 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Clean & Rebuild Project Structure
+      - name: Clean & Auto-Fix Project Files
         run: |
           # ഫയലുകൾ സബ്-ഫോൾഡറിലാണെങ്കിൽ പുറത്തേക്ക് മാറ്റുന്നു
           if [ -d "myl_palakkad_app" ]; then
@@ -67,9 +67,24 @@ jobs:
               - assets/images/
           EOF
 
-          # പഴയ android, test ഫോൾഡറുകൾ മാറ്റി പുതിയത് നിർമ്മിക്കുന്നു
+          # പഴയ android ഫോൾഡർ മാറ്റി പുതിയത് നിർമ്മിക്കുന്നു, തുടർന്ന് test ഫോൾഡർ നീക്കം ചെയ്യുന്നു
           rm -rf android test pubspec.lock
           flutter create --org org.mylpalakkad --project-name myl_palakkad_app --platforms android .
+          rm -rf test
+
+          # മുറിഞ്ഞുപോയ ഒറ്റ വരി സ്ട്രിംഗുകൾ Python വഴി കൃത്യമായി തിരുത്തുന്നു
+          python3 - << 'PYEOF'
+          for filepath in ['lib/main.dart', 'lib/screens/blood_bank_screen.dart']:
+              with open(filepath, 'r', encoding='utf-8') as f:
+                  content = f.read()
+              # Fix broken multiline string in main.dart
+              content = content.replace("subtitle: Text('${ann['date']}\n${ann['description']}'),", "subtitle: Text('${ann['date']} - ${ann['description']}'),")
+              # Fix broken multiline string in blood_bank_screen.dart
+              content = content.replace("child: Text('${donor.mandalam} • ${donor.panchayat} (${donor.shakha})\nഫോൺ: ${donor.phone}'),", "child: Text('${donor.mandalam} • ${donor.panchayat} (${donor.shakha}) | ഫോൺ: ${donor.phone}'),")
+              content = content.replace("activeColor: AppColors.primaryGreen,", "")
+              with open(filepath, 'w', encoding='utf-8') as f:
+                  f.write(content)
+          PYEOF
 
           # ഫോൺ വിളിക്കാനും വാട്സ്ആപ്പ് തുറക്കാനുമുള്ള അനുമതികൾ ചേർക്കുന്നു
           sed -i '/<application/i <uses-permission android:name="android.permission.INTERNET"/>' android/app/src/main/AndroidManifest.xml
@@ -78,9 +93,6 @@ jobs:
           mkdir -p assets/fonts assets/images
           touch assets/images/placeholder.txt
           curl -L -s "https://github.com/google/fonts/raw/main/ofl/manjari/Manjari-Regular.ttf" -o assets/fonts/Manjari-Regular.ttf || touch assets/fonts/Manjari-Regular.ttf
-
-          # SwitchListTile activeColor ഒഴിവാക്കുന്നു
-          find lib -name "*.dart" -exec sed -i 's/activeColor: AppColors.primaryGreen,//g' {} +
 
       - name: Install Flutter Dependencies
         run: flutter pub get
@@ -104,8 +116,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.6.${{ github.run_number }}
-          name: "MYL Palakkad App v1.6.${{ github.run_number }}"
+          tag_name: v1.7.${{ github.run_number }}
+          name: "MYL Palakkad App v1.7.${{ github.run_number }}"
           files: build/app/outputs/flutter-apk/MYL_Palakkad_Official.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

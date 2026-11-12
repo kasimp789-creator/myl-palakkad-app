@@ -1,0 +1,3 @@
+Firebase Console-ൽ നിന്ന് ഡൗൺലോഡ് ചെയ്ത 'google-services.json' ഫയൽ കൃത്യമായി ഈ ഫോൾഡറിലാണ് (android/app/google-services.json) പേസ്റ്റ് ചെയ്യേണ്ടത്.
+
+Package Name: org.mylpalakkad.myl_palakkad_app

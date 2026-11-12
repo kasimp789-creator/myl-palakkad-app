@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "639922072588",
+    "project_id": "myl-palakkad-app",
+    "storage_bucket": "myl-palakkad-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:639922072588:android:d389eaf23f971568c91229",
+        "android_client_info": {
+          "package_name": "org.mylpalakkad.myl_palakkad_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_fZw8f3vviU8JRBxo_aLd4O2smEo6WyE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

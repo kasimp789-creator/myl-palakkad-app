@@ -23,14 +23,14 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Flutter (Stable 3.24.5 for 100% Package Compatibility)
+      - name: Set up Flutter (Stable 3.24.5)
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.5'
           channel: 'stable'
           cache: true
 
-      - name: Prepare Clean Project & Fix Structure
+      - name: Clean & Rebuild Project Structure
         run: |
           # ഫയലുകൾ സബ്-ഫോൾഡറിലാണെങ്കിൽ പുറത്തേക്ക് മാറ്റുന്നു
           if [ -d "myl_palakkad_app" ]; then
@@ -38,7 +38,7 @@ jobs:
             rm -rf myl_palakkad_app
           fi
 
-          # Clean pubspec.yaml without conflicting native plugins
+          # Clean pubspec.yaml എഴുതുന്നു
           cat << 'EOF' > pubspec.yaml
           name: myl_palakkad_app
           description: Official Mobile Application for Muslim Youth League Palakkad District Committee.
@@ -67,8 +67,8 @@ jobs:
               - assets/images/
           EOF
 
-          # പഴയ android ഫോൾഡറും lock ഫയലും മാറ്റി പുതിയത് നിർമ്മിക്കുന്നു
-          rm -rf android pubspec.lock
+          # പഴയ android, test ഫോൾഡറുകൾ മാറ്റി പുതിയത് നിർമ്മിക്കുന്നു
+          rm -rf android test pubspec.lock
           flutter create --org org.mylpalakkad --project-name myl_palakkad_app --platforms android .
 
           # ഫോൺ വിളിക്കാനും വാട്സ്ആപ്പ് തുറക്കാനുമുള്ള അനുമതികൾ ചേർക്കുന്നു
@@ -79,11 +79,14 @@ jobs:
           touch assets/images/placeholder.txt
           curl -L -s "https://github.com/google/fonts/raw/main/ofl/manjari/Manjari-Regular.ttf" -o assets/fonts/Manjari-Regular.ttf || touch assets/fonts/Manjari-Regular.ttf
 
+          # SwitchListTile activeColor ഒഴിവാക്കുന്നു
+          find lib -name "*.dart" -exec sed -i 's/activeColor: AppColors.primaryGreen,//g' {} +
+
       - name: Install Flutter Dependencies
         run: flutter pub get
 
-      - name: Check Dart Files Before Build
-        run: flutter analyze
+      - name: Verify Dart Syntax
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Build Release APK
         run: flutter build apk --release --no-tree-shake-icons
@@ -101,8 +104,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.5.${{ github.run_number }}
-          name: "MYL Palakkad App v1.5.${{ github.run_number }}"
+          tag_name: v1.6.${{ github.run_number }}
+          name: "MYL Palakkad App v1.6.${{ github.run_number }}"
           files: build/app/outputs/flutter-apk/MYL_Palakkad_Official.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

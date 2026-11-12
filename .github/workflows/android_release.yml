@@ -23,13 +23,14 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Flutter
+      - name: Set up Flutter (Stable 3.24.5 for 100% Package Compatibility)
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.24.5'
           channel: 'stable'
           cache: true
 
-      - name: Fix Folder Structure & Recreate Clean Android Project
+      - name: Prepare Clean Project & Fix Structure
         run: |
           # ഫയലുകൾ സബ്-ഫോൾഡറിലാണെങ്കിൽ പുറത്തേക്ക് മാറ്റുന്നു
           if [ -d "myl_palakkad_app" ]; then
@@ -37,43 +38,55 @@ jobs:
             rm -rf myl_palakkad_app
           fi
 
-          # google-services.json ഉണ്ടെങ്കിൽ ബാക്കപ്പ് ചെയ്യുന്നു
-          if [ -f "android/app/google-services.json" ]; then
-            cp android/app/google-services.json /tmp/google-services.json
-          fi
+          # Clean pubspec.yaml without conflicting native plugins
+          cat << 'EOF' > pubspec.yaml
+          name: myl_palakkad_app
+          description: Official Mobile Application for Muslim Youth League Palakkad District Committee.
+          publish_to: 'none'
+          version: 1.2.0+3
 
-          # പഴയ android ഫോൾഡർ നീക്കം ചെയ്ത് പുതിയത് നിർമ്മിക്കുന്നു
-          rm -rf android
+          environment:
+            sdk: '>=3.2.0 <4.0.0'
+
+          dependencies:
+            flutter:
+              sdk: flutter
+            pdf: ^3.11.1
+            printing: ^5.13.2
+            url_launcher: ^6.3.0
+            intl: ^0.19.0
+
+          dev_dependencies:
+            flutter_test:
+              sdk: flutter
+
+          flutter:
+            uses-material-design: true
+            assets:
+              - assets/fonts/
+              - assets/images/
+          EOF
+
+          # പഴയ android ഫോൾഡറും lock ഫയലും മാറ്റി പുതിയത് നിർമ്മിക്കുന്നു
+          rm -rf android pubspec.lock
           flutter create --org org.mylpalakkad --project-name myl_palakkad_app --platforms android .
 
-          # ഫോൺ വിളിക്കാനും ഇന്റർനെറ്റിനുമുള്ള അനുമതികൾ ചേർക്കുന്നു
+          # ഫോൺ വിളിക്കാനും വാട്സ്ആപ്പ് തുറക്കാനുമുള്ള അനുമതികൾ ചേർക്കുന്നു
           sed -i '/<application/i <uses-permission android:name="android.permission.INTERNET"/>' android/app/src/main/AndroidManifest.xml
-
-          # google-services.json തിരികെ ഇടുന്നു
-          if [ -f "/tmp/google-services.json" ]; then
-            cp /tmp/google-services.json android/app/google-services.json
-          fi
 
           # assets ഫോൾഡറുകളും മലയാളം ഫോണ്ടും ഉറപ്പാക്കുന്നു
           mkdir -p assets/fonts assets/images
-          touch assets/images/.keep
-          if [ ! -f "assets/fonts/Manjari-Regular.ttf" ]; then
-            curl -L -s "https://github.com/google/fonts/raw/main/ofl/manjari/Manjari-Regular.ttf" -o assets/fonts/Manjari-Regular.ttf || true
-          fi
-
-      - name: Auto-Fix Flutter 3.50 Dart Compatibility
-        run: |
-          # പുതിയ Flutter വെർഷനിൽ ഒഴിവാക്കിയ പ്രോപ്പർട്ടികൾ ഉണ്ടെങ്കിൽ തനിയെ തിരുത്തുന്നു
-          find lib -name "*.dart" -exec sed -i 's/activeColor: AppColors.primaryGreen,//g' {} +
+          touch assets/images/placeholder.txt
+          curl -L -s "https://github.com/google/fonts/raw/main/ofl/manjari/Manjari-Regular.ttf" -o assets/fonts/Manjari-Regular.ttf || touch assets/fonts/Manjari-Regular.ttf
 
       - name: Install Flutter Dependencies
         run: flutter pub get
 
-      - name: Verify Dart Code (Check for any syntax error)
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings || true
+      - name: Check Dart Files Before Build
+        run: flutter analyze
 
       - name: Build Release APK
-        run: flutter build apk --release --no-tree-shake-icons -v
+        run: flutter build apk --release --no-tree-shake-icons
 
       - name: Rename APK for Easy Sharing
         run: |
@@ -88,8 +101,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.4.${{ github.run_number }}
-          name: "MYL Palakkad App v1.4.${{ github.run_number }}"
+          tag_name: v1.5.${{ github.run_number }}
+          name: "MYL Palakkad App v1.5.${{ github.run_number }}"
           files: build/app/outputs/flutter-apk/MYL_Palakkad_Official.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -29,14 +29,38 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Ensure Complete Android Wrapper & Icons
+      - name: Fix Folder Structure & Recreate Clean Android Project
         run: |
-          flutter create --org org.mylpalakkad --platforms android .
+          # ഫയലുകൾ myl_palakkad_app എന്ന സബ്-ഫോൾഡറിലാണെങ്കിൽ പുറത്തേക്ക് മാറ്റുന്നു
+          if [ -d "myl_palakkad_app" ]; then
+            cp -r myl_palakkad_app/* .
+            rm -rf myl_palakkad_app
+          fi
+          
+          # google-services.json ഉണ്ടെങ്കിൽ ബാക്കപ്പ് ചെയ്യുന്നു
+          if [ -f "android/app/google-services.json" ]; then
+            cp android/app/google-services.json /tmp/google-services.json
+          fi
+
+          # ഗ്രാഡിൽ എറർ ഒഴിവാക്കാൻ പഴയ android ഫോൾഡർ നീക്കം ചെയ്ത് പുതിയത് ഉണ്ടാക്കുന്നു
+          rm -rf android
+          flutter create --org org.mylpalakkad --project-name myl_palakkad_app --platforms android .
+
+          # ഫോൺ വിളിക്കാനും വാട്സ്ആപ്പ് തുറക്കാനുമുള്ള അനുമതികൾ ചേർക്കുന്നു
+          sed -i '/<application/i <uses-permission android:name="android.permission.INTERNET"/>' android/app/src/main/AndroidManifest.xml
+
+          # google-services.json തിരികെ ഇടുന്നു
+          if [ -f "/tmp/google-services.json" ]; then
+            cp /tmp/google-services.json android/app/google-services.json
+          fi
+
+          # assets ഫോൾഡറുകൾ ഉറപ്പാക്കുന്നു
+          mkdir -p assets/fonts assets/images
 
       - name: Install Flutter Dependencies
         run: flutter pub get
 
-      - name: Build Signed Release APK
+      - name: Build Release APK
         run: flutter build apk --release --no-tree-shake-icons
 
       - name: Rename APK for Easy Sharing
@@ -52,8 +76,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.2.${{ github.run_number }}
-          name: "MYL Palakkad App v1.2.${{ github.run_number }}"
+          tag_name: v1.3.${{ github.run_number }}
+          name: "MYL Palakkad App v1.3.${{ github.run_number }}"
           files: build/app/outputs/flutter-apk/MYL_Palakkad_Official.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
